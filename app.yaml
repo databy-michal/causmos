@@ -1,4 +1,4 @@
-# Copyright 2021 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,48 +12,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-runtime: python39
+runtime: python312
 entrypoint: gunicorn -b :$PORT main:app -w 2 --timeout=300
 instance_class: F4_1G
-automatic_scaling:
- min_idle_instances: 1
 
 handlers:
-  # This configures Google App Engine to serve the files in the app's static
-  # directory.
-  # Add your Cloud Project ID to the Access-Control-Allow-Origin URL
-- url: /static
-  static_dir: static
-  secure: always
-  redirect_http_response_code: 301
-  http_headers:
-    Access-Control-Allow-Origin: https://[PROJECT_ID].ew.r.appspot.com
-    X-Content-Type-Options: nosniff
-    X-Frame-Options: SAMEORIGIN
-    SESSION_COOKIE_SECURE: true
-    SESSION_COOKIE_HTTPONLY: true
-    SESSION_COOKIE_SAMESITE: 'Lax'
+  # Static files configuration
+  - url: /static
+    static_dir: static
+    secure: always
+    redirect_http_response_code: 301
+    http_headers:
+      Access-Control-Allow-Origin: https://[PROJECT_ID].ew.r.appspot.com
+      X-Content-Type-Options: nosniff
+      X-Frame-Options: SAMEORIGIN
+      # Note: Cookie headers are usually handled by your Flask app code, 
+      # but keeping them here as per your original config.
+      SESSION_COOKIE_SECURE: "true"
+      SESSION_COOKIE_HTTPONLY: "true"
+      SESSION_COOKIE_SAMESITE: 'Lax'
 
-  # This handler routes all requests not caught above to your main app. It is
-  # required when static routes are defined, but can be omitted (along with
-  # the entire handlers section) when there are no static files defined.
-- url: /.*
-  script: auto
-  secure: always
-  redirect_http_response_code: 301
+  - url: /favicon\.ico
+    static_files: static/favicon.ico
+    upload: static/favicon.ico
 
-- url: /favicon\.ico
-  static_files: static/favicon.ico
-  upload: static/favicon.ico
+  # Main application routing
+  - url: /.*
+    script: auto
+    secure: always
+    redirect_http_response_code: 301
 
 inbound_services:
-- warmup
+  - warmup
 
 env_variables:
-  SLIDE_TEMPLATE: "" #Google Slide template ID for the default template
+  SLIDE_TEMPLATE: "" # Google Slide template ID for the default template
 
-# Add the following secrets to your Google Secrets Manager
-#   client_secret - Upload your client_secret.json file to this
-#   flask_secret_key - The secret key for your Flask instance
-#   developer_token - The developer token found in the API section of your google Ads account
-#   image_bucket - An open bucket for the images to be read externally (add a 1 day TTL) and stored by your service account
+# SECRETS REMINDER (Store in Secret Manager, not here):
+# client_secret, flask_secret_key, developer_token, image_bucket
